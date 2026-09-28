@@ -33,10 +33,11 @@ PY
 }
 
 start_server() { # $1 = fichier des actions, $2 = 1 pour créer un code d'association
-  E2E_OPS="$1" E2E_MAKE_CODE="$2" node .github/scripts/android-e2e-server.js > "/tmp/server-$1.log" 2>&1 &
+  local log="/tmp/server-$(basename "$1").log"
+  E2E_OPS="$1" E2E_MAKE_CODE="$2" node .github/scripts/android-e2e-server.js > "$log" 2>&1 &
   SERVER=$!
-  for _ in $(seq 1 30); do grep -q ready "/tmp/server-$1.log" 2>/dev/null && return 0; sleep 1; done
-  fail "serveur non démarré"; cat "/tmp/server-$1.log"
+  for _ in $(seq 1 30); do grep -q ready "$log" 2>/dev/null && return 0; sleep 1; done
+  fail "serveur non démarré"; cat "$log"
 }
 
 rm -f /tmp/ops1.json /tmp/ops2.json
