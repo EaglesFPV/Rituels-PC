@@ -22,6 +22,7 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.ProgressBar
@@ -126,8 +127,14 @@ class MainActivity : AppCompatActivity() {
     private fun refreshCache(pc: Pc) {
         runCatching {
             val client = PcClient(pc)
-            val mac = client.status().optString("mac")
-            if (WakeOnLan.parseMac(mac) != null && mac != pc.mac) prefs.pc = pc.copy(mac = mac)
+            val status = client.status()
+            val mac = status.optString("mac")
+            val name = status.optString("host").ifEmpty { pc.name }
+            val macKnown = WakeOnLan.parseMac(mac) != null
+            // Après une association manuelle, le PC n'est connu que par son adresse : on récupère son nom et sa MAC.
+            if ((macKnown && mac != pc.mac) || (pc.name == pc.host && name != pc.name)) {
+                prefs.pc = pc.copy(mac = if (macKnown) mac else pc.mac, name = if (pc.name == pc.host) name else pc.name)
+            }
             val array = client.modes()
             prefs.modes = (0 until array.length()).map {
                 val o = array.getJSONObject(it)
@@ -175,7 +182,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val cancel = button("Annuler") { cancelWake(); route() }.apply { visibility = View.GONE }
-        val power = label("⏻", 64f).apply {
+        val power = ImageView(this).apply {
+            setImageResource(R.drawable.ic_power)
+            contentDescription = "Bouton allumer"
+            setPadding(dp(46), dp(46), dp(46), dp(46))
             background = round(ACCENT, dp(80))
             layoutParams = LinearLayout.LayoutParams(dp(150), dp(150)).apply { gravity = Gravity.CENTER_HORIZONTAL; topMargin = dp(20) }
         }

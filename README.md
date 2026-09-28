@@ -45,6 +45,7 @@ exécute tout, en local : aucun compte, aucun serveur, aucun abonnement.
 | **Services** | Discord, Spotify (collez le lien de partage d'une playlist, d'un album ou d'un morceau), éclairage SignalRGB, fonds animés Wallpaper Engine. |
 | **Bureau** | Lancer n'importe quel programme, ouvrir un lien ou un fichier, fond d'écran, volume, fermer un programme, attendre, script PowerShell. |
 | **Téléphone** | Association par QR code sur le Wi-Fi local, sans Internet. Chaque téléphone peut être retiré à tout moment. |
+| **Allumer le PC** | L'app Android envoie le signal d'allumage (Wake-on-LAN), attend le démarrage de Windows et peut lancer un mode dès que le PC est prêt. |
 | **Alimentation** | Verrouiller, veille, hibernation, redémarrer, éteindre (avec délai et bouton Annuler). |
 | **Voix** | Commandes vocales 100 % locales (« lance Gaming »), avec le moteur de reconnaissance de Windows. Désactivées par défaut. |
 | **Bureau Windows** | Zone de notification avec la liste des modes, raccourci global **Ctrl + Alt + R**, démarrage avec Windows (facultatif), mises à jour automatiques. |
@@ -59,24 +60,51 @@ exécute tout, en local : aucun compte, aucun serveur, aucun abonnement.
 
 Les versions installées se mettent à jour automatiquement.
 
-## Associer un téléphone
+## Application Android
 
-1. Téléphone et PC sur le même Wi-Fi.
-2. Sur le PC : onglet **Contrôle › Associer un téléphone**.
-3. Scannez le QR code avec l'appareil photo du téléphone (ou ouvrez l'adresse affichée et saisissez le code).
-4. Ajoutez la page à l'écran d'accueil (menu du navigateur › *Ajouter à l'écran d'accueil*) pour l'avoir comme une app.
+1. Téléchargez **Rituels-PC-Android-x.y.z.apk** depuis les [Releases](https://github.com/EaglesFPV/Rituels-PC/releases/latest)
+   sur le téléphone et autorisez l'installation depuis le navigateur (l'application n'est pas sur Google Play).
+   L'empreinte SHA-256 est dans `SHA256SUMS-android.txt`.
+2. Téléphone et PC sur le même Wi-Fi. Sur le PC : onglet **Contrôle › Associer un téléphone**.
+3. Dans l'application : **Scanner le QR code** (ou *Saisir le code à la main*).
 
-Le code est valable 5 minutes et ne sert qu'une fois.
+L'application affiche ensuite l'interface de Rituels PC. Quand le PC est éteint, elle affiche un grand bouton
+**Allumer** : choisissez éventuellement un mode à lancer ensuite, et Rituels PC s'en charge dès que Windows a démarré.
+
+Le code d'association est valable 5 minutes et ne sert qu'une fois. Sans l'application, on peut aussi ouvrir l'adresse
+affichée dans le navigateur du téléphone (pas d'allumage possible dans ce cas).
 
 <div align="center">
 <img src="docs/screenshots/controle.png" alt="Onglet Contrôle" width="300">
 </div>
 
+## Allumer le PC depuis le téléphone (Wake-on-LAN)
+
+Le téléphone envoie un « paquet magique » à la carte réseau du PC, qui reste alimentée quand le PC est éteint.
+Cela demande quelques réglages, à faire une seule fois :
+
+1. **Câble Ethernet** : branchez le PC à la box par câble. Le Wi-Fi ne réveille pas un PC éteint de façon fiable.
+2. **BIOS / UEFI** : activez l'option de réveil par le réseau (« Wake-on-LAN », « Power On By PCI-E » ou équivalent ;
+   le nom varie selon la carte mère). Laissez le mode d'économie « ErP » désactivé.
+3. **Windows** : Gestionnaire de périphériques › carte réseau › onglet *Avancé* : activez « Wake on Magic Packet »
+   (et « Shutdown Wake-On-Lan » si présent) ; onglet *Gestion de l'alimentation* : autorisez la carte à sortir le PC de
+   veille, uniquement par paquet magique.
+4. **Démarrage rapide** : désactivez-le (Options d'alimentation › Choisir l'action des boutons d'alimentation) s'il
+   gêne le réveil depuis l'extinction. La veille est en général plus fiable que l'extinction complète.
+5. **Ouverture de session** : Rituels PC ne peut lancer vos applications qu'une fois la session Windows ouverte.
+   Activez *Lancer avec Windows* dans Contrôle › Réglages, et l'ouverture automatique de session si vous voulez
+   que tout démarre sans toucher au PC (à réserver à un PC domestique non partagé).
+
+La box, le téléphone et le PC doivent être sur le même réseau : le Wi-Fi invité et l'isolation des clients bloquent le signal.
+Le QR code d'association transmet à l'application l'adresse MAC de la carte Ethernet ; si le PC n'a qu'une carte Wi-Fi,
+Rituels PC vous le signale et l'allumage ne fonctionnera que depuis la veille, quand la carte le permet.
+
 ## Limites actuelles
 
-- **Pas d'app native iPhone / Android** : le téléphone utilise une application web installable sur l'écran d'accueil.
-- **Pas de réveil du PC éteint** : le PC doit être allumé (ou en veille) pour recevoir les ordres ; réveiller un
-  PC éteint demanderait un appareil toujours allumé sur le réseau.
+- **Android uniquement pour l'application native** : sur iPhone, l'interface web fonctionne dans Safari (modes,
+  volume, alimentation), mais sans allumage ; une app iPhone demanderait un compte développeur Apple payant.
+- **L'application Android n'est pas sur Google Play** : installation manuelle de l'APK.
+- **Le PC doit être joignable pour recevoir les ordres** : éteint, seul l'allumage par Wake-on-LAN est possible.
 - **Réseau local uniquement** : rien n'est joignable depuis Internet, et c'est voulu.
 - **Spotify** ouvre la playlist ou le morceau ; le lancement de la lecture dépend de Spotify.
 - **Installateur non signé** : la signature demande un certificat payant.
@@ -98,12 +126,16 @@ npm run dist       # construit l'installateur dans dist/
 npm run icon       # régénère les icônes depuis build/logo-dark.svg
 ```
 
+L'application Android (`android/`, Kotlin) se compile avec Gradle 8 et JDK 17 : `gradle assembleDebug` dans `android/`.
+Pas besoin d'Android Studio, la CI s'en charge.
+
 Structure :
 
 ```
 src/core       modes, actions, appareils, voix, serveur local (sans dépendance à Electron)
 src/main       application de bureau : fenêtre, zone de notification, mises à jour
 src/renderer   interface (servie à la fenêtre PC et au téléphone)
+android        application Android (coquille native : association, Wake-on-LAN, WebView)
 test           tests (node --test)
 ```
 
@@ -111,7 +143,11 @@ Deux workflows GitHub Actions :
 
 - **Build** : à chaque envoi sur `main`, exécute les tests et produit un installateur de développement (artefact).
 - **Release** : lancé à la main (*Actions › Release › Run workflow*) avec un numéro de version ; il teste,
-  compile, calcule les empreintes SHA-256, crée le tag et publie l'installateur dans les Releases.
+  compile, calcule les empreintes SHA-256, crée le tag et publie l'installateur dans les Releases, puis compile
+  l'APK Android signé et l'ajoute à la même release.
+- **Android** : tests unitaires et APK de développement à chaque changement du dossier `android/`.
+- **Android émulateur** (manuel) : joue un scénario complet sur un émulateur (association, lancement d'un mode,
+  PC éteint, allumage, mode lancé au réveil) contre un vrai serveur Rituels PC.
 
 ## Licence
 

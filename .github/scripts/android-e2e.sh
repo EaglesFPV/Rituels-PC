@@ -71,7 +71,7 @@ tap_text "Aucun (juste"; sleep 1; shot 6-liste-des-modes
 tap_text "Détente"; sleep 1
 
 # 4) Allumer : signal envoyé, puis le PC « démarre » (le serveur revient)
-tap_text "⏻"; sleep 6; shot 7-allumage-en-cours
+tap_text "Bouton allumer"; sleep 6; shot 7-allumage-en-cours
 start_server /tmp/ops2.json 0
 sleep 12; shot 8-pc-allume
 grep -q '"op":"volume"' /tmp/ops2.json 2>/dev/null && echo "OK : le mode choisi a été lancé au réveil" || fail "le mode n'a pas été lancé après l'allumage"

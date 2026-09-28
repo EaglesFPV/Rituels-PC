@@ -42,6 +42,8 @@ et éteindre le PC. La sécurité repose donc sur le fait que **seuls vos appare
 - **Un appareil appairé compromis** : il peut tout ce que fait l'application, y compris exécuter une commande
   PowerShell via un mode. Retirez-le dès que vous le perdez.
 - **Un programme malveillant déjà présent sur votre PC** : il peut lire la configuration et le jeton de la fenêtre.
+- **Le signal d'allumage** : le paquet magique Wake-on-LAN n'est pas authentifié par nature. Il ne fait qu'allumer
+  le PC, mais toute personne du réseau qui connaît l'adresse MAC de la carte peut l'envoyer.
 - **Le trafic en clair sur le Wi-Fi** : la connexion est en HTTP sur le réseau local ; quelqu'un capable
   d'écouter votre réseau pourrait voir les échanges. Utilisez un réseau de confiance (pas de Wi-Fi public).
 - **L'exposition sur Internet** : ne redirigez jamais le port 7799 depuis votre box.
