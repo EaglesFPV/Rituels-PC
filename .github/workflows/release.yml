@@ -106,6 +106,10 @@ jobs:
           « Windows a protégé votre ordinateur ». Cliquez sur **Informations complémentaires › Exécuter quand même**.
 
           Empreinte SHA-256 : voir ``SHA256SUMS.txt``.
+
+          **Application Android** : téléchargez **Rituels-PC-Android-$env:VERSION.apk** sur le téléphone et autorisez
+          l'installation depuis le navigateur ou le gestionnaire de fichiers (application hors Google Play).
+          Empreinte : voir ``SHA256SUMS-android.txt``.
           "@
           $arguments = @(
             "v$env:VERSION",
@@ -120,3 +124,61 @@ jobs:
           )
           if ($env:DRAFT -eq 'true') { $arguments += '--draft' }
           gh release create @arguments
+
+  android:
+    name: Application Android v${{ inputs.version }}
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+      KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+    steps:
+      - name: Récupérer le code de la version
+        uses: actions/checkout@v7
+        with:
+          ref: v${{ inputs.version }}
+
+      - name: Installer Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Installer Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: 8.10.2
+
+      - name: Préparer la clé de signature
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "Les secrets de signature Android sont absents."; exit 1; fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/rituels-pc.p12"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/rituels-pc.p12" >> "$GITHUB_ENV"
+
+      - name: Tests
+        working-directory: android
+        run: gradle testDebugUnitTest --no-daemon
+
+      - name: Compiler l'APK signé
+        working-directory: android
+        run: |
+          IFS=. read -r major minor patch <<< "$VERSION"
+          gradle assembleRelease --no-daemon -PversionName="$VERSION" -PversionCode=$((major * 10000 + minor * 100 + patch))
+
+      - name: Vérifier la signature
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Publier l'APK dans la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk "Rituels-PC-Android-$VERSION.apk"
+          sha256sum "Rituels-PC-Android-$VERSION.apk" > SHA256SUMS-android.txt
+          cat SHA256SUMS-android.txt
+          gh release upload "v$VERSION" "Rituels-PC-Android-$VERSION.apk" SHA256SUMS-android.txt --clobber
