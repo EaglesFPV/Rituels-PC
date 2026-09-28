@@ -1,0 +1,86 @@
+{
+  "name": "rituels-pc",
+  "productName": "Rituels PC",
+  "version": "1.0.0",
+  "description": "Lancez vos modes PC (applis, jeux, sites, musique, fond d'écran) en un clic, depuis le PC ou le téléphone",
+  "author": "EaglesFPV",
+  "license": "MIT",
+  "homepage": "https://github.com/EaglesFPV/Rituels-PC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EaglesFPV/Rituels-PC.git"
+  },
+  "main": "src/main/index.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "test": "node --test \"test/*.test.js\"",
+    "dist": "electron-builder --win --publish never",
+    "icon": "electron scripts/make-icon.js"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "fr.rituelspc.app",
+    "productName": "Rituels PC",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "npmRebuild": false,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "EaglesFPV",
+        "repo": "Rituels-PC"
+      }
+    ],
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "enableCookieEncryption": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "artifactName": "Rituels-PC-Setup-${version}.exe",
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Rituels PC",
+      "runAfterFinish": true,
+      "installerLanguages": [
+        "fr_FR"
+      ],
+      "language": "1036"
+    }
+  }
+}
