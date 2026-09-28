@@ -71,6 +71,11 @@ Les versions installées se mettent à jour automatiquement.
 L'application affiche ensuite l'interface de Rituels PC. Quand le PC est éteint, elle affiche un grand bouton
 **Allumer** : choisissez éventuellement un mode à lancer ensuite, et Rituels PC s'en charge dès que Windows a démarré.
 
+<div align="center">
+<img src="docs/screenshots/android-allumer.png" alt="Écran d'allumage sur Android" width="240">
+<img src="docs/screenshots/android-modes.png" alt="Modes sur Android" width="240">
+</div>
+
 Le code d'association est valable 5 minutes et ne sert qu'une fois. Sans l'application, on peut aussi ouvrir l'adresse
 affichée dans le navigateur du téléphone (pas d'allumage possible dans ce cas).
 
