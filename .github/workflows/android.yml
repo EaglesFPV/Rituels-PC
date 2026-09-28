@@ -37,9 +37,9 @@ jobs:
         with:
           gradle-version: 8.10.2
 
-      - name: Compiler l'APK de développement
+      - name: Tests et APK de développement
         working-directory: android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: gradle testDebugUnitTest assembleDebug --no-daemon --stacktrace
 
       - name: Joindre l'APK
         uses: actions/upload-artifact@v7
