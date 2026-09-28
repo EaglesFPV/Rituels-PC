@@ -18,18 +18,26 @@ let quitting = false;
 const updater = new Updater();
 
 function showWindow() {
-  if (!win) return;
+  if (!win) return createWindow(true);
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
 }
 
+// Fermer détruit la fenêtre et son processus d'affichage pour libérer la mémoire :
+// en jeu, seul le service reste actif.
+function closeWindow() {
+  if (!win) return;
+  if (service.settings.tray) win.close();
+  else win.hide();
+}
+
 function toggleWindow() {
-  if (win && win.isVisible() && win.isFocused()) win.hide();
+  if (win && win.isVisible() && win.isFocused()) closeWindow();
   else showWindow();
 }
 
-function createWindow() {
+function createWindow(visible) {
   win = new BrowserWindow({
     width: 480, height: 800, minWidth: 380, minHeight: 560,
     show: false, backgroundColor: '#0f1117', autoHideMenuBar: true, icon: ICON, title: 'Rituels PC',
@@ -37,19 +45,14 @@ function createWindow() {
   });
   win.removeMenu();
   win.loadURL(service.localUrl);
-  win.once('ready-to-show', () => { if (!startHidden && !smoke) win.show(); });
+  win.once('ready-to-show', () => { if (visible) win.show(); });
+  win.on('closed', () => { win = null; });
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (event, url) => {
     if (!url.startsWith(service.localUrl)) event.preventDefault();
-  });
-  win.on('close', (event) => {
-    if (!quitting && service.settings.tray) {
-      event.preventDefault();
-      win.hide();
-    }
   });
   if (dev) win.webContents.openDevTools({ mode: 'detach' });
 }
@@ -105,7 +108,8 @@ async function boot() {
   service.on('modes-changed', refreshTrayMenu);
   service.on('settings-changed', applyLoginItem);
   applyLoginItem();
-  createWindow();
+  if (smoke) createWindow(false);
+  else if (!startHidden) createWindow(true); // démarrage masqué : aucune fenêtre, donc aucun processus d'affichage
   createTray();
   globalShortcut.register(SHORTCUT, toggleWindow);
   if (!smoke) updater.start(true);
@@ -129,6 +133,6 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', showWindow);
   app.on('before-quit', () => { quitting = true; });
   app.on('will-quit', () => { globalShortcut.unregisterAll(); if (service) service.stop(); });
-  app.on('window-all-closed', () => app.quit());
+  app.on('window-all-closed', () => { if (quitting || !service.settings.tray) app.quit(); });
   app.whenReady().then(boot);
 }
