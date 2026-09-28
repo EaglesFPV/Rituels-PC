@@ -160,6 +160,10 @@ async function openPairing() {
     h('div', { class: 'hint', style: 'text-align:center' }, `Ou ouvrez ${pairing.url} et saisissez le code :`),
     h('div', { class: 'code' }, pairing.code),
     h('div', { class: 'hint', style: 'text-align:center' }, 'Valable 5 minutes, à usage unique.'),
+    pairing.mac ? h('div', { class: 'hint', style: 'text-align:center;margin-top:8px' },
+      pairing.wired
+        ? `Allumage à distance : adresse MAC ${pairing.mac} (Ethernet).`
+        : `Aucune carte Ethernet active : l'allumage à distance ne fonctionnera pas depuis l'extinction (MAC ${pairing.mac}, Wi-Fi).`) : null,
     h('div', { class: 'row', style: 'justify-content:flex-end;margin-top:14px' }, h('button', { class: 'btn', onclick: () => dialog.close() }, 'Fermer')));
   const watcher = setInterval(async () => {
     try {

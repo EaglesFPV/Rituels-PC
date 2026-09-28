@@ -10,6 +10,7 @@ const { DEFAULT_MODES, cleanModes, resolveStep } = require('./modes');
 const actions = require('./actions');
 const { Devices, Throttle } = require('./devices');
 const { VoiceListener, findMode } = require('./voice');
+const wake = require('./wake');
 const { readJson, writeJson } = require('./store');
 
 const RENDERER = path.join(__dirname, '..', 'renderer');
@@ -57,13 +58,15 @@ class Service extends EventEmitter {
   #throttle = new Throttle();
   #voice = null;
   #run = null;
+  #adapter = null;
+  #adapterAt = 0;
   #runCounter = 0;
   #options;
 
-  constructor({ dataDir, port = 7799, version = '0.0.0', execute = actions.execute, power = actions.POWER, voice = true }) {
+  constructor({ dataDir, port = 7799, version = '0.0.0', execute = actions.execute, power = actions.POWER, voice = true, adapterInfo = wake.wiredAdapter }) {
     super();
     fs.mkdirSync(dataDir, { recursive: true });
-    this.#options = { dataDir, version, execute, power, voice, requestedPort: port };
+    this.#options = { dataDir, version, execute, power, voice, adapterInfo, requestedPort: port };
     this.configFile = path.join(dataDir, 'config.json');
     this.modesFile = path.join(dataDir, 'modes.json');
     this.#config = readJson(this.configFile, {});
@@ -92,6 +95,15 @@ class Service extends EventEmitter {
 
   issueLocalToken() { return this.#devices.issueLocal(); }
 
+  // Carte réseau à viser pour le réveil : mise en cache 30 s, jamais bloquante en cas d'échec.
+  async adapter() {
+    if (Date.now() - this.#adapterAt > 30_000) {
+      this.#adapterAt = Date.now();
+      try { this.#adapter = await this.#options.adapterInfo(); } catch { /* on garde la dernière valeur connue */ }
+    }
+    return this.#adapter;
+  }
+
   start() {
     return new Promise((resolve, reject) => {
       const server = http.createServer((req, res) => this.#handle(req, res));
@@ -99,6 +111,7 @@ class Service extends EventEmitter {
       server.listen(this.#config.port, '0.0.0.0', () => {
         server.off('error', reject);
         this.#server = server;
+        this.adapter();
         if (this.#options.voice) this.#initVoice();
         resolve(this);
       });
@@ -185,6 +198,7 @@ class Service extends EventEmitter {
   #status() {
     return {
       host: os.hostname(), version: this.#options.version, urls: this.lanUrls(), run: this.#run, settings: this.settings,
+      mac: this.#adapter ? this.#adapter.mac : null,
       voice: this.#voice ? { state: this.#voice.state, message: this.#voice.message || '' } : { state: 'off', message: '' },
     };
   }
@@ -264,10 +278,12 @@ class Service extends EventEmitter {
 
     if (route === '/api/pair/new' && req.method === 'POST') {
       const { code, expiresAt } = this.#devices.createPairing();
-      const base = this.lanUrls()[0] || this.localUrl;
-      const link = `${base}/#pair=${code}`;
-      const qr = await QRCode.toDataURL(link, { margin: 1, width: 280 });
-      return send(200, { code, expiresAt, url: base, qr });
+      // Le lien contient l'adresse du PC, son nom et la MAC de la carte Ethernet : l'app Android s'en sert pour l'allumer.
+      const adapter = await this.adapter();
+      const base = adapter ? `http://${adapter.ip}:${this.port}` : (this.lanUrls()[0] || this.localUrl);
+      const details = new URLSearchParams({ pair: code, name: os.hostname(), ...(adapter && { mac: adapter.mac }) });
+      const qr = await QRCode.toDataURL(`${base}/#${details}`, { margin: 1, width: 280 });
+      return send(200, { code, expiresAt, url: base, qr, mac: adapter ? adapter.mac : null, wired: adapter ? adapter.wired : false });
     }
     if (route === '/api/devices' && req.method === 'GET') return send(200, this.#devices.list());
     let match = route.match(/^\/api\/devices\/(\w+)$/);

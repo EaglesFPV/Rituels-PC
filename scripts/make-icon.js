@@ -10,6 +10,10 @@ const OUTPUTS = [
   { file: path.join(ROOT, 'build', 'icon.png'), size: 512 },
   { file: path.join(ROOT, 'src', 'main', 'assets', 'icon.png'), size: 256 },
   { file: path.join(ROOT, 'src', 'renderer', 'apple-touch-icon.png'), size: 180 },
+  // Icônes de l'application Android (une par densité d'écran)
+  ...Object.entries({ mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 }).map(([density, size]) => ({
+    file: path.join(ROOT, 'android', 'app', 'src', 'main', 'res', `mipmap-${density}`, 'ic_launcher.png'), size,
+  })),
 ];
 
 const logo = fs.readFileSync(path.join(ROOT, 'build', 'logo-dark.svg'), 'utf8')

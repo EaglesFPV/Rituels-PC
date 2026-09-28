@@ -1,0 +1,51 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compiler l'application Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v7
+
+      - name: Installer Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Installer Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: 8.10.2
+
+      - name: Compiler l'APK de développement
+        working-directory: android
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Joindre l'APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: Rituels-PC-Android-dev
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+          if-no-files-found: error
+          compression-level: 0

@@ -14,6 +14,7 @@ async function start(options = {}) {
   const powered = [];
   const service = new Service({
     dataDir, port: 0, voice: false,
+    adapterInfo: async () => ({ mac: '04:42:1A:11:22:33', ip: '192.168.1.20', wired: true }),
     execute: async (op) => { executed.push(op); },
     power: { lock: async () => powered.push('lock'), cancel: async () => powered.push('cancel') },
     ...options,
@@ -54,6 +55,10 @@ test('l\'appairage donne un cookie, une seule fois par code, et bloque après de
     const local = t.service.issueLocalToken();
     const pairing = (await t.call('/api/pair/new', { method: 'POST', token: local })).body;
     assert.match(pairing.qr, /^data:image\/png;base64,/);
+    assert.equal(pairing.mac, '04:42:1A:11:22:33');
+    assert.equal(pairing.wired, true);
+    assert.equal(pairing.url, `http://192.168.1.20:${t.service.port}`);
+    assert.equal((await t.call('/api/status', { token: local })).body.mac, '04:42:1A:11:22:33');
     const ok = await t.call('/api/pair', { method: 'POST', body: { code: pairing.code }, headers: { 'user-agent': 'Mozilla/5.0 (iPhone)' } });
     assert.equal(ok.status, 200);
     const cookie = ok.headers.get('set-cookie');
