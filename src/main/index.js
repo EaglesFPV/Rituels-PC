@@ -17,6 +17,10 @@ let tray = null;
 let quitting = false;
 const updater = new Updater();
 
+// Pas de jeu ni de vidéo dans cette interface : le rendu logiciel évite de faire tourner en permanence
+// un processus GPU dédié à Electron, qui resterait actif à côté d'un jeu même fenêtre fermée.
+app.disableHardwareAcceleration();
+
 function showWindow() {
   if (!win) return createWindow(true);
   if (win.isMinimized()) win.restore();
@@ -25,11 +29,12 @@ function showWindow() {
 }
 
 // Fermer détruit la fenêtre et son processus d'affichage pour libérer la mémoire :
-// en jeu, seul le service reste actif.
+// en jeu, seul le service reste actif. Sans zone de notification, fermer quitte
+// vraiment l'application (sinon la fenêtre resterait cachée en mémoire, invisible et injoignable).
 function closeWindow() {
   if (!win) return;
   if (service.settings.tray) win.close();
-  else win.hide();
+  else { quitting = true; app.quit(); }
 }
 
 function toggleWindow() {
@@ -45,7 +50,7 @@ function createWindow(visible) {
   });
   win.removeMenu();
   win.loadURL(service.localUrl);
-  win.once('ready-to-show', () => { if (visible) win.show(); });
+  win.once('ready-to-show', () => { if (visible) { win.show(); win.focus(); } });
   win.on('closed', () => { win = null; });
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) shell.openExternal(url);
