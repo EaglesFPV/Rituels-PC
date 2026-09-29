@@ -49,6 +49,8 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
     private enum class Screen { NONE, CHECKING, UNPAIRED, OFFLINE, ONLINE, WEB }
 
+    private data class PowerAction(val label: String, val action: String, val icon: Int? = null, val confirm: String? = null)
+
     private lateinit var prefs: Prefs
     private lateinit var root: FrameLayout
     private val ui = Handler(Looper.getMainLooper())
@@ -229,7 +231,7 @@ class MainActivity : AppCompatActivity() {
                 label("Rituels PC", 18f, bold = true, center = false),
                 row(dot(OK), label(pc.name, 13f, DIM, center = false)),
             ), LinearLayout.LayoutParams(0, WRAP, 1f))
-            addView(iconButton("⏻") { openPowerSheet(pc) })
+            addView(iconButtonDrawable(R.drawable.ic_power) { openPowerSheet(pc) })
             addView(iconButton("⚙") { showWeb(pc) })
         }
         val list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -306,20 +308,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openPowerSheet(pc: Pc) {
+        // "⏻" (symbole d'alimentation, U+23FB) manque dans beaucoup de polices Android, y compris sur de vrais
+        // téléphones : on lui préfère l'icône vectorielle déjà utilisée pour le gros bouton d'allumage.
         val actions = listOf(
-            Triple("🔒", "Verrouiller", "lock") to null,
-            Triple("🌙", "Veille", "sleep") to null,
-            Triple("❄️", "Hibernation", "hibernate") to null,
-            Triple("🔄", "Redémarrer", "restart") to "Redémarrer le PC dans 15 secondes ?",
-            Triple("⏻", "Éteindre", "shutdown") to "Éteindre le PC dans 15 secondes ?",
-            Triple("✋", "Annuler l'extinction", "cancel") to null,
+            PowerAction("🔒 Verrouiller", "lock"),
+            PowerAction("🌙 Veille", "sleep"),
+            PowerAction("❄️ Hibernation", "hibernate"),
+            PowerAction("🔄 Redémarrer", "restart", confirm = "Redémarrer le PC dans 15 secondes ?"),
+            PowerAction("Éteindre", "shutdown", icon = R.drawable.ic_power, confirm = "Éteindre le PC dans 15 secondes ?"),
+            PowerAction("✋ Annuler l'extinction", "cancel"),
         )
         val dialog = AlertDialog.Builder(this).setTitle(pc.name).create()
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(8), dp(4), dp(8), dp(12))
-            for ((info, confirmMsg) in actions) {
-                val (icon, title, action) = info
+            for (item in actions) {
                 addView(LinearLayout(this@MainActivity).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -327,10 +330,10 @@ class MainActivity : AppCompatActivity() {
                     isClickable = true
                     setOnClickListener {
                         dialog.dismiss()
-                        if (confirmMsg != null) confirm(confirmMsg) { sendPower(pc, action) } else sendPower(pc, action)
+                        if (item.confirm != null) confirm(item.confirm) { sendPower(pc, item.action) } else sendPower(pc, item.action)
                     }
-                    addView(label(icon, 20f), LinearLayout.LayoutParams(WRAP, WRAP).apply { rightMargin = dp(16) })
-                    addView(label(title, 16f, center = false))
+                    if (item.icon != null) addView(iconDrawable(item.icon, 20), LinearLayout.LayoutParams(dp(20), dp(20)).apply { rightMargin = dp(18) })
+                    addView(label(item.label, 16f, center = false))
                 })
             }
         }
@@ -678,6 +681,20 @@ class MainActivity : AppCompatActivity() {
             if (bold) setTypeface(typeface, Typeface.BOLD)
             if (center) gravity = Gravity.CENTER
         }
+
+    private fun iconDrawable(res: Int, size: Int) = ImageView(this).apply {
+        setImageResource(res)
+        layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
+    }
+
+    private fun iconButtonDrawable(res: Int, onClick: () -> Unit) = ImageView(this).apply {
+        setImageResource(res)
+        setPadding(dp(10), dp(10), dp(10), dp(10))
+        isClickable = true
+        isFocusable = true
+        layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
+        setOnClickListener { onClick() }
+    }
 
     private fun iconButton(glyph: String, onClick: () -> Unit) = TextView(this).apply {
         text = glyph
