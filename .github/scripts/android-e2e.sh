@@ -44,7 +44,8 @@ rm -f /tmp/ops1.json /tmp/ops2.json
 start_server /tmp/ops1.json 1
 CODE=$(cat /tmp/code.txt)
 
-adb install -r android/app/build/outputs/apk/debug/app-debug.apk > /dev/null
+APK=$(ls android/app/build/outputs/apk/release/app-release*.apk | head -1)
+adb install -r "$APK" > /dev/null
 adb logcat -c
 adb shell am start -n $PKG/.MainActivity > /dev/null
 sleep 4; shot 1-non-associe

@@ -12,7 +12,9 @@ class PcClient(private val pc: Pc) {
 
     class Session(val authed: Boolean, val host: String)
 
-    fun request(method: String, path: String, body: String? = null, timeoutMs: Int = 3000): Response {
+    // Réseau local : un délai court suffit très largement (quelques ms en pratique) et resserre la
+    // fréquence d'essai pendant l'allumage, quand le PC n'est encore joignable à aucun niveau réseau.
+    fun request(method: String, path: String, body: String? = null, timeoutMs: Int = 1500): Response {
         val connection = URL(pc.base + path).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = method

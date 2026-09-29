@@ -36,9 +36,23 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
-      - name: Compiler l'APK
+      # Compile la version réduite (R8) et signée : celle qui est réellement distribuée, pour que
+      # ce scénario prouve que la réduction du code ne casse rien (scan QR code, WebView, réseau).
+      - name: Préparer la clé de signature
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/rituels-pc.p12"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/rituels-pc.p12" >> "$GITHUB_ENV"
+          fi
+
+      - name: Compiler l'APK réduit et signé
         working-directory: android
-        run: gradle assembleDebug --no-daemon
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: gradle assembleRelease --no-daemon
 
       - name: Autoriser KVM
         run: |
