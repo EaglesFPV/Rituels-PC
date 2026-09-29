@@ -57,5 +57,9 @@ class PcClient(private val pc: Pc) {
 
     fun modes(): JSONArray = JSONArray(request("GET", "/api/modes").body)
 
+    fun saveModes(modes: JSONArray): Response = request("PUT", "/api/modes", modes.toString())
+
     fun runMode(id: String): Response = request("POST", "/api/modes/$id/run")
+
+    fun power(action: String): Response = request("POST", "/api/power", JSONObject().put("action", action).toString())
 }
